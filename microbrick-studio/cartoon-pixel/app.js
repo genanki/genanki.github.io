@@ -3,7 +3,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const E=window.CartoonPixelEngine;
-const state={items:[],current:null,image:null,result:null,activeColor:"#352725",tool:"brush",showGrid:true,history:[],drawing:false,request:0,busy:false};
+const state={items:[],current:null,image:null,result:null,activeColor:"#352725",tool:"brush",showGrid:true,history:[],drawing:false,request:0,busy:false,pending:false};
 const images=["image/jpeg","image/png","image/webp"];
 const format=n=>Math.round(n).toLocaleString("zh-CN");
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
@@ -53,7 +53,7 @@ if(state.items.some(t=>t.name===f.name&&t.size===f.size&&t.lastModified===f.last
 state.items.push(f);added++;
 }
 filesDisplay();
-if(added&&(!state.current||state.items.length===added))selectItem(state.items[state.items.length-added]);
+if(added)selectItem(state.items[state.items.length-added]);
 else if(!added)error("未找到可导入的图片或 JSON 文件。");
 }
 async function bitmap(file){
@@ -99,7 +99,8 @@ g.drawImage(state.image.bitmap,(w-dw)/2,(h-dh)/2,dw,dh);
 return g.getImageData(0,0,w,h);
 }
 async function run(){
-if(!state.image||state.busy)return;
+if(!state.image)return;
+if(state.busy){state.pending=true;return;}
 const id=state.request;
 state.busy=true;$("run").disabled=true;error("");
 setStatus("正在处理卡通分区、颜色合并及方格填色，请稍候…");
@@ -117,7 +118,7 @@ showCartoon(result.cartoon);renderGrid();renderPalette();renderStats();
 $("undo").disabled=true;
 setStatus("完成："+baseName()+" · "+cols+"×"+rows+" 格 · "+result.colorsUsed+" 种颜色（可继续修正）");
 }catch(ex){console.error(ex);error("生成失败："+ex.message);setStatus("尝试减少格数或换一张图片。");}
-finally{state.busy=false;$("run").disabled=!state.image;}
+finally{state.busy=false;$("run").disabled=!state.image;if(state.pending&&state.image){state.pending=false;setTimeout(run,0);}}
 }
 function showCartoon(info){
 let c=$("cartoon");c.width=info.width;c.height=info.height;
