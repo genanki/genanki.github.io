@@ -89,7 +89,7 @@ else adj.set(out[v],(adj.get(out[v])||0)+1);
 }
 if(tail>=minSize||!adj.size)continue;
 const rgb=colors[label]||[128,128,128],importance=Math.max(...rgb)-Math.min(...rgb),dark=(rgb[0]+rgb[1]+rgb[2])/3<75;
-if((importance>75||dark)&&tail>=2)continue; // keep eyes and other high-saturation details
+if(importance>65||dark&&tail>=2)continue; // protect tiny blue eyes and pink noses
 let best=-1,score=-1;
 adj.forEach((count,index)=>{let metric=count;if(metric>score){score=metric;best=index;}});
 for(let i=0;i<tail;i++)out[queue[i]]=best;
@@ -108,6 +108,7 @@ if(dd>high){high=dd;best=b;}
 if(high<threshold)continue;
 let L=labs[a][0],other=labs[best][0];
 if(L+7>=other)continue;
+if(Math.hypot(labs[a][1],labs[a][2])>34&&L>35)continue; // do not paint over blue eyes / pink accents
 if(mode===1){
 let n=0;for(let j of neighbors)if(labels[j]!==a)n++;
 if(n<1)continue;
@@ -135,7 +136,12 @@ let labidx=mapped[py*w+px],n=++hist[labidx];if(n>max){max=n;index=labidx;}
 }
 labels[cy*cols+cx]=index;
 }
+let salient=labels.slice();
 labels=majorityFilter(labels,cols,rows,strength>=65?2:1,strength>=50?5:7);
+for(let i=0;i<labels.length;i++){
+let c=colors[salient[i]].rgb,contrast=Math.max(...c)-Math.min(...c),lum=(c[0]+c[1]+c[2])/3;
+if(contrast>65||lum<67)labels[i]=salient[i]; // protect important facial landmarks
+}
 labels=componentClean(labels,cols,rows,minRegion,colors.map(c=>c.rgb));
 let rgbs=colors.map(c=>c.rgb),pixelLabels=outlineCells(labels,cols,rows,rgbs,edge);
 if(edge)rgbs.push([52,39,37]);
